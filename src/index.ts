@@ -1,6 +1,7 @@
 import { Api, JsonRpc } from "eosjs";
 import { SignatureProvider } from "eosjs/dist/eosjs-api-interfaces";
 import { IWhitelistedContract } from "./IWhitelistedContract";
+import { BandwidthPayer } from "./BandwidthPayer";
 import { WaxEventSource } from "./WaxEventSource";
 
 export class WaxJS {
@@ -11,18 +12,20 @@ export class WaxJS {
   private pubKeys: string[];
   private signingWindow: Window;
   private whitelistedContracts: IWhitelistedContract[];
+  private bandwidthPayer: BandwidthPayer | undefined;
 
   constructor(
-    rcpEndpoint: string,
+    rpcEndpoint: string,
     userAccount: string = null,
     pubKeys: string[] = null,
     tryAutoLogin: boolean = true,
     private apiSigner: SignatureProvider = null,
     private waxSigningURL: string = "https://all-access.wax.io",
-    private waxAutoSigningURL: string = "https://api-idm.wax.io/v1/accounts/auto-accept/"
+    private waxAutoSigningURL: string = "https://api-idm.wax.io/v1/accounts/auto-accept/",
+    bandwidthPayer: BandwidthPayer | boolean = false
   ) {
     this.waxEventSource = new WaxEventSource(waxSigningURL);
-    this.rpc = new JsonRpc(rcpEndpoint);
+    this.rpc = new JsonRpc(rpcEndpoint);
 
     if (userAccount && Array.isArray(pubKeys)) {
       // login from constructor
@@ -32,6 +35,14 @@ export class WaxJS {
       // try to auto-login via endpoint
       if (tryAutoLogin) {
         this.loginViaEndpoint();
+      }
+    }
+
+    if (bandwidthPayer) {
+      if (typeof bandwidthPayer !== "boolean") {
+        this.bandwidthPayer = bandwidthPayer;
+      } else {
+        this.bandwidthPayer = new BandwidthPayer();
       }
     }
   }
@@ -57,7 +68,6 @@ export class WaxJS {
         return false;
       }
     }
-    return false;
   }
 
   private async loginViaWindow() {
@@ -140,6 +150,12 @@ export class WaxJS {
     // we ensure that it is not going to be rejected due to a delayed
     // pop up that would otherwise occur post transaction creation
     this.api.transact = async (transaction, namedParams) => {
+      if (this.bandwidthPayer) {
+        transaction.actions.unshift({
+          ...this.bandwidthPayer,
+          data: {}
+        });
+      }
       if (!(await this.canAutoSign(transaction))) {
         this.signingWindow = await window.open(
           url,
