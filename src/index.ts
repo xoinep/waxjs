@@ -140,7 +140,7 @@ export class WaxJS {
           signatures: string[];
         } = await this.signing({
           transaction: data.serializedTransaction,
-          waxPaysBW: !!this.apiSigner
+          waxPaysBW: !this.apiSigner
         });
         // TODO: eliminate this mutation. Check what else is on this data abject that would also need mutation
         // TODO: allow for a verification callback to permit dapp creators an opportunity to validate the serialized tx received from wax-on
