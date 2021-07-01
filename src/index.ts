@@ -1,19 +1,28 @@
 import { Api, JsonRpc } from "eosjs";
-import { SignatureProvider } from "eosjs/dist/eosjs-api-interfaces";
+import {
+  SignatureProvider,
+  AuthorityProvider,
+  AbiProvider
+} from "eosjs/dist/eosjs-api-interfaces";
 import { IWhitelistedContract } from "./IWhitelistedContract";
 import { WaxEventSource } from "./WaxEventSource";
 
 export class WaxJS {
   public api: Api;
+  public pubKeys: string[];
   private waxEventSource: WaxEventSource;
   private readonly rpc: JsonRpc;
   private userAccount: string;
-  private pubKeys: string[];
   private signingWindow: Window;
   private whitelistedContracts: IWhitelistedContract[];
   private apiSigner: SignatureProvider;
   private waxSigningURL: string;
   private waxAutoSigningURL: string;
+  private eosApiArgs: any;
+  private freeBandwidth: boolean;
+  private verifyTx: {
+    (userAccount: string, originalTx: any, augmentedTx: any): void;
+  };
 
   constructor({
     rpcEndpoint,
@@ -22,7 +31,10 @@ export class WaxJS {
     pubKeys,
     apiSigner,
     waxSigningURL = "https://all-access.wax.io",
-    waxAutoSigningURL = "https://api-idm.wax.io/v1/accounts/auto-accept/"
+    waxAutoSigningURL = "https://api-idm.wax.io/v1/accounts/auto-accept/",
+    eosApiArgs = {},
+    freeBandwidth = true,
+    verifyTx = defaultTxVerifier
   }: {
     rpcEndpoint: string;
     userAccount?: string;
@@ -31,12 +43,20 @@ export class WaxJS {
     apiSigner?: SignatureProvider;
     waxSigningURL: string;
     waxAutoSigningURL: string;
+    eosApiArgs: any;
+    freeBandwidth: boolean;
+    verifyTx: {
+      (userAccount: string, originalTx: any, augmentedTx: any): void;
+    };
   }) {
     this.waxEventSource = new WaxEventSource(waxSigningURL);
     this.rpc = new JsonRpc(rpcEndpoint);
     this.waxSigningURL = waxSigningURL;
     this.waxAutoSigningURL = waxAutoSigningURL;
     this.apiSigner = apiSigner;
+    this.eosApiArgs = eosApiArgs;
+    this.freeBandwidth = freeBandwidth;
+    this.verifyTx = verifyTx;
 
     if (userAccount && Array.isArray(pubKeys)) {
       // login from constructor
@@ -140,10 +160,17 @@ export class WaxJS {
           signatures: string[];
         } = await this.signing({
           transaction: data.serializedTransaction,
-          waxPaysBW: !this.apiSigner
+          waxPaysBW: !this.apiSigner && this.freeBandwidth
         });
-        // TODO: eliminate this mutation. Check what else is on this data abject that would also need mutation
-        // TODO: allow for a verification callback to permit dapp creators an opportunity to validate the serialized tx received from wax-on
+
+        const originalTx = await this.api.deserializeTransactionWithActions(
+          data.serializedTransaction
+        );
+        const augmentedTx = await this.api.deserializeTransactionWithActions(
+          serializedTransaction
+        );
+        this.verifyTx(this.userAccount, originalTx, augmentedTx);
+
         data.serializedTransaction = serializedTransaction;
         return {
           serializedTransaction,
@@ -158,6 +185,7 @@ export class WaxJS {
     };
     // @ts-ignore
     this.api = new Api({
+      ...this.eosApiArgs,
       rpc: this.rpc,
       signatureProvider
     });
@@ -294,5 +322,68 @@ export class WaxJS {
       );
     }
     return [];
+  }
+}
+
+function defaultTxVerifier(
+  userAccount: string,
+  originalTx: any,
+  augmentedTx: any
+) {
+  const { actions: originalActions } = originalTx;
+  const { actions: augmentedActions } = augmentedTx;
+
+  if (
+    augmentedActions.length !== originalActions.length &&
+    augmentedActions.length !== originalActions.length + 1
+  ) {
+    throw new Error(
+      `Augmented transaction actions length mismatch.\nOriginal: ${JSON.stringify(
+        originalActions,
+        undefined,
+        2
+      )}\nAugmented: ${JSON.stringify(augmentedActions, undefined, 2)}`
+    );
+  }
+
+  if (augmentedActions.length === originalActions.length) {
+    if (JSON.stringify(originalActions) !== JSON.stringify(augmentedActions)) {
+      throw new Error(
+        `Augmented transaction actions has modified actions from the original.\nOriginal: ${JSON.stringify(
+          originalActions,
+          undefined,
+          2
+        )}\nAugmented: ${JSON.stringify(augmentedActions, undefined, 2)}`
+      );
+    }
+    return;
+  }
+
+  if (
+    JSON.stringify(originalActions) !==
+    JSON.stringify(augmentedActions.slice(1))
+  ) {
+    throw new Error(
+      `Augmented transaction actions has modified actions from the original.\nOriginal: ${JSON.stringify(
+        originalActions,
+        undefined,
+        2
+      )}\nAugmented: ${JSON.stringify(augmentedActions, undefined, 2)}`
+    );
+  }
+
+  const extraAction = augmentedActions.shift();
+  const userAuthedAction = extraAction.authorization.find((auth: any) => {
+    return auth.actor === userAccount;
+  });
+
+  if (userAuthedAction) {
+    throw new Error(
+      `Augmented transaction actions has an extra action from the original authorizing the user.\nOriginal: ${JSON.stringify(
+        originalActions,
+        undefined,
+        2
+      )}\nAugmented: ${JSON.stringify(augmentedActions, undefined, 2)}`
+    );
   }
 }
