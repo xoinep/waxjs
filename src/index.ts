@@ -160,7 +160,7 @@ export class WaxJS {
           signatures: string[];
         } = await this.signing({
           transaction: data.serializedTransaction,
-          waxPaysBW: !this.apiSigner && this.freeBandwidth
+          freeBandwidth: !this.apiSigner && this.freeBandwidth
         });
 
         const originalTx = await this.api.deserializeTransactionWithActions(
@@ -244,16 +244,16 @@ export class WaxJS {
 
   private async signViaEndpoint({
     transaction,
-    waxPaysBW
+    freeBandwidth
   }: {
     transaction: any;
-    waxPaysBW: boolean;
+    freeBandwidth: boolean;
   }) {
     try {
       const response: any = await fetch(this.waxAutoSigningURL + "signing", {
         body: JSON.stringify({
           transaction: Object.values(transaction),
-          waxPaysBW
+          freeBandwidth
         }),
         credentials: "include",
         headers: {
@@ -280,11 +280,11 @@ export class WaxJS {
 
   private async signViaWindow(
     window: Window,
-    { transaction, waxPaysBW }: { transaction: any; waxPaysBW: boolean }
+    { transaction, freeBandwidth }: { transaction: any; freeBandwidth: boolean }
   ) {
     const confirmationWindow: Window = await this.waxEventSource.openEventSource(
       this.waxSigningURL + "/cloud-wallet/signing/",
-      { type: "TRANSACTION", transaction, waxPaysBW },
+      { type: "TRANSACTION", transaction, freeBandwidth },
       window
     );
 
