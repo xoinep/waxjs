@@ -194,7 +194,6 @@ export class WaxJS {
                     mineType: 'CPU',
                     transaction: Object.values(transaction)
                 }),
-                credentials: "include",
                 headers: {
                     "Content-Type": "application/json"
                 },
