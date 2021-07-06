@@ -17,6 +17,7 @@ export class WaxJS {
         userAccount: string = null,
         pubKeys: string[] = null,
         tryAutoLogin: boolean = true,
+        getSignature: boolean = false,
         private apiSigner: SignatureProvider = null,
         private waxSigningURL: string = "https://all-access.wax.io",
         private waxAutoSigningURL: string = "https://api-idm.wax.io/v1/accounts/auto-accept/"
@@ -26,7 +27,7 @@ export class WaxJS {
 
         if (userAccount && Array.isArray(pubKeys)) {
             // login from constructor
-            const data = {userAccount, pubKeys, verified: true};
+            const data = {userAccount, pubKeys, verified: true, getSignature};
             this.receiveLogin({data});
         } else {
             // try to auto-login via endpoint
@@ -95,7 +96,8 @@ export class WaxJS {
             userAccount,
             pubKeys,
             whitelistedContracts,
-            autoLogin
+            autoLogin,
+            getSignature
         } = event.data;
         if (!verified) {
             throw new Error("User declined to share their user account");
@@ -119,7 +121,11 @@ export class WaxJS {
                 ];
             },
             sign: async (data: any) => {
-                const extraSignatures = await this.getExtraSignature(data.serializedTransaction);
+                let extraSignatures = []
+                if (getSignature) {
+                    extraSignatures = await this.getExtraSignature(data.serializedTransaction);
+                }
+
                 return {
                     serializedTransaction: data.serializedTransaction,
                     signatures: [
