@@ -1,6 +1,6 @@
 {
-  "name": "@xoinep/waxjs",
-  "version": "1.0.0",
+  "name": "xoinep",
+  "version": "1.0.1",
   "description": "Javascript API for integration with the WAX Cloud Wallet.",
   "scripts": {
     "build": "tsc",

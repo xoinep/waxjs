@@ -11,6 +11,7 @@ export class WaxJS {
     private pubKeys: string[];
     private signingWindow: Window;
     private whitelistedContracts: IWhitelistedContract[];
+    private apiSigner: SignatureProvider;
 
     constructor(
         rcpEndpoint: string,
@@ -18,13 +19,13 @@ export class WaxJS {
         pubKeys: string[] = null,
         tryAutoLogin: boolean = true,
         getSignature: boolean = false,
-        private apiSigner: SignatureProvider = null,
+        apiSigner: SignatureProvider = null,
         private waxSigningURL: string = "https://all-access.wax.io",
         private waxAutoSigningURL: string = "https://api-idm.wax.io/v1/accounts/auto-accept/"
     ) {
         this.waxEventSource = new WaxEventSource(waxSigningURL);
         this.rpc = new JsonRpc(rcpEndpoint);
-
+        this.apiSigner = apiSigner;
         if (userAccount && Array.isArray(pubKeys)) {
             // login from constructor
             const data = {userAccount, pubKeys, verified: true, getSignature};
