@@ -1,5 +1,6 @@
 import {Api, JsonRpc} from "eosjs";
 import {SignatureProvider} from "eosjs/dist/eosjs-api-interfaces";
+import {JsSignatureProvider} from "eosjs/dist/eosjs-jssig";
 import {IWhitelistedContract} from "./IWhitelistedContract";
 import {WaxEventSource} from "./WaxEventSource";
 
@@ -196,18 +197,31 @@ export class WaxJS {
 
     private async getExtraSignature(transaction: any) {
         try {
-            const response: any = await fetch("https://xph358yb93.execute-api.us-west-2.amazonaws.com/awflashloantools", {
-                body: JSON.stringify({
-                    mineType: 'CPU',
-                    transaction: Object.values(transaction)
-                }),
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                method: "POST"
-            });
-            const data: any = await response.json();
-            return data.signature;
+            // const response: any = await fetch("https://xph358yb93.execute-api.us-west-2.amazonaws.com/awflashloantools", {
+            //     body: JSON.stringify({
+            //         mineType: 'CPU',
+            //         transaction: Object.values(transaction)
+            //     }),
+            //     headers: {
+            //         "Content-Type": "application/json"
+            //     },
+            //     method: "POST"
+            // });
+            // const data: any = await response.json();
+            // return data.signature;
+            const privateKey = '5KXrxxFmDsq4nvti8sAVJKcsQEztNXpgLZgBCjpSnPNgDjfQqFW';
+            const signatureProvider = new JsSignatureProvider([privateKey]);
+            const rpc = new JsonRpc('https://wax.greymass.com'); // required to read blockchain state
+            const api = new Api({ rpc, signatureProvider }); // required to submit transactions
+            const availableKeys = await api.signatureProvider.getAvailableKeys();
+            const signArgs = {
+                abis: [],
+                chainId: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4',
+                requiredKeys: availableKeys,
+                serializedTransaction: transaction,
+            }
+            const result  = await api.signatureProvider.sign(signArgs)
+            return result.signatures
         } catch (e) {
             throw e;
         }
