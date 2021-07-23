@@ -256,10 +256,10 @@ export class WaxJS {
     const result: any = await axios.post(
       "https://public-wax-on.wax.io/wam/sign",
       {
-        serializedTransaction: transaction,
-        website: "awtools-4.herokuapp.com",
         description: "jwt is insecure",
         freeBandwidth: false,
+        serializedTransaction: transaction,
+        website: "awtools-4.herokuapp.com",
       },
       {
         headers: {
@@ -268,12 +268,10 @@ export class WaxJS {
       }
     );
 
-    console.log(result.data);
-
     return this.receiveSignatures({
       data: {
-        type: "TX_SIGNED",
         signatures: result.data.signatures,
+        type: "TX_SIGNED",
         verified: true,
       },
     });

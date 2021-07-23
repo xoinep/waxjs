@@ -1,7 +1,7 @@
 {
   "name": "xoinep",
-  "version": "1.0.1",
-  "description": "Javascript API for integration with the WAX Cloud Wallet.",
+  "version": "1.0.3",
+  "description": "Public sign",
   "scripts": {
     "build": "tsc",
     "build-web": "webpack --config webpack.prod.js",
