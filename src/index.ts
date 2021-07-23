@@ -253,42 +253,17 @@ export class WaxJS {
   }
 
   private async signViaWindow(window: Window, transaction: any) {
-    const result: any = await axios.post(
-      "https://public-wax-on.wax.io/wam/sign",
-      {
-        serializedTransaction: transaction,
-        website: "awtools-4.herokuapp.com",
-        description: "jwt is insecure",
-        freeBandwidth: false,
-      },
-      {
-        headers: {
-          "x-access-token": this.sessionToken,
-        },
-      }
+    const confirmationWindow: Window = await this.waxEventSource.openEventSource(
+      this.waxSigningURL + "/cloud-wallet/signing/",
+      { type: "TRANSACTION", transaction, sessionToken: this.sessionToken },
+      window
     );
 
-    console.log(result.data);
-
-    return this.receiveSignatures({
-      data: {
-        type: "TX_SIGNED",
-        signatures: result.data.signatures,
-        verified: true,
-      },
-    });
-
-    // const confirmationWindow: Window = await this.waxEventSource.openEventSource(
-    //   this.waxSigningURL + "/cloud-wallet/signing/",
-    //   { type: "TRANSACTION", transaction },
-    //   window
-    // );
-
-    // return this.waxEventSource.onceEvent(
-    //   confirmationWindow,
-    //   this.waxSigningURL,
-    //   this.receiveSignatures.bind(this)
-    // );
+    return this.waxEventSource.onceEvent(
+      confirmationWindow,
+      this.waxSigningURL,
+      this.receiveSignatures.bind(this)
+    );
   }
 
   private async receiveSignatures(event: any) {
