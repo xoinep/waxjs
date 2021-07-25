@@ -1,7 +1,7 @@
 {
   "name": "xoinep",
-  "version": "1.0.3",
-  "description": "Public sign",
+  "version": "1.0.4",
+  "description": "Public sign via window",
   "scripts": {
     "build": "tsc",
     "build-web": "webpack --config webpack.prod.js",
