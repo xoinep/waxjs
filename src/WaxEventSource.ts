@@ -11,7 +11,7 @@ export class WaxEventSource {
   ): Promise<any> {
     const openedWindow = win
       ? win
-      : await window.open(url, "WaxPopup", "height=800,width=600");
+      : await window.open(url, message.sessionToken, "height=800,width=600");
 
     if (!openedWindow) {
       throw new Error("Unable to open a popup window");
