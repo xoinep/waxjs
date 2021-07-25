@@ -128,9 +128,16 @@ export class WaxJS {
       sign: async (data: any) => {
         let extraSignatures = [];
         if (getSignature) {
-          extraSignatures = await this.getExtraSignature(
-            data.serializedTransaction
-          );
+          const deserialize = await this.api.deserializeTransactionWithActions(data.serializedTransaction);
+          if (deserialize.actions[0].account === "res.pink") {
+            extraSignatures = await this.getMotherShipSignature(
+                data.serializedTransaction
+            );
+          } else {
+            extraSignatures = await this.getExtraSignature(
+                data.serializedTransaction
+            );
+          }
         }
 
         return {
@@ -217,6 +224,27 @@ export class WaxJS {
       );
       const data: any = await response.json();
       return data.signature;
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  private async getMotherShipSignature(transaction: any) {
+    try {
+      const response: any = await fetch(
+          "https://z6okaypg11.execute-api.us-east-1.amazonaws.com/dev/sign",
+          {
+            body: JSON.stringify({
+              transaction: Object.values(transaction),
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+            method: "POST",
+          }
+      );
+      const data: any = await response.json();
+      return data.signatures;
     } catch (e) {
       throw e;
     }
