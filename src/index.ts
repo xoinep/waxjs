@@ -165,7 +165,7 @@ export class WaxJS {
       if (!(await this.canAutoSign(transaction))) {
         this.signingWindow = await window.open(
           url,
-          "WaxPopup",
+          Date.now().toString(),
           "height=800,width=600"
         );
       }
